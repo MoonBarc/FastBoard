@@ -23,6 +23,8 @@
  */
 package fr.mrmicky.fastboard;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -167,6 +169,11 @@ public class FastBoard {
 
     private boolean deleted = false;
 
+    private String serializeComponent(Component component) {
+        GsonComponentSerializer s = GsonComponentSerializer.INSTANCE;
+        return s.serialize((net.kyori.text.Component) component);
+    }
+
     /**
      * Creates a new FastBoard.
      *
@@ -216,6 +223,22 @@ public class FastBoard {
         } catch (Throwable t) {
             throw new RuntimeException("Unable to update scoreboard title", t);
         }
+    }
+
+    /**
+     * Update the scoreboard title.
+     *
+     * @param title
+     * @throws IllegalArgumentException if the version is below 1.17
+     * @throws IllegalStateException    if {@link #delete()} was call before
+     */
+    // TODO: make 1.17 check actually 1.16
+    public void updateTitle(Component title) {
+        if(!VersionType.V1_17.isHigherOrEqual()) {
+            throw new IllegalArgumentException("Cannot use components below 1.17");
+        }
+
+        updateTitle(serializeComponent(title));
     }
 
     /**
@@ -275,6 +298,17 @@ public class FastBoard {
     }
 
     /**
+     * Update a single scoreboard line.
+     *
+     * @param line the line number
+     * @param text the new line text
+     * @throws IndexOutOfBoundsException if the line is higher than {@link #size() size() + 1}
+     */
+    public synchronized void updateLine(int line, Component text) {
+        updateLine(line, serializeComponent(text));
+    }
+
+    /**
      * Remove a scoreboard line.
      *
      * @param line the line number
@@ -300,6 +334,32 @@ public class FastBoard {
      */
     public void updateLines(String... lines) {
         updateLines(Arrays.asList(lines));
+    }
+
+    /**
+     * Update all the scoreboard lines.
+     *
+     * @param lines the new lines
+     * @throws IllegalArgumentException if one line is longer than 30 chars on 1.12 or lower
+     * @throws IllegalStateException    if {@link #delete()} was call before
+     */
+    public void updateLinesWithComponents(Component... lines) {
+        ArrayList<String> serializedLines = new ArrayList<>();
+        Arrays.stream(lines).forEach(l -> serializedLines.add(serializeComponent(l)));
+        updateLines(serializedLines);
+    }
+
+    /**
+     * Update all the scoreboard lines.
+     *
+     * @param lines the new lines
+     * @throws IllegalArgumentException if one line is longer than 30 chars on 1.12 or lower
+     * @throws IllegalStateException    if {@link #delete()} was call before
+     */
+    public void updateLinesWithComponents(Collection<Component> lines) {
+        ArrayList<String> serializedLines = new ArrayList<>();
+        lines.stream().forEach(l -> serializedLines.add(serializeComponent(l)));
+        updateLines(serializedLines);
     }
 
     /**
